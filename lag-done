@@ -1,0 +1,74 @@
+#!/bin/bash
+
+##
+# lag-done
+# Last Activity on Git Done
+# Shows you the last activity you did on git.
+# Default is to show you yesterday, or if yesterday is a weekend, then friday and the weekend
+# 
+# First Param: A number for days ago to report on.
+#
+# Example: $ lag-done 4
+# This would return any commit messages from 4 days ago.
+#
+# Note: Merges are ignored.
+#
+# @Author Wil Wade <wil@wilwade.com>
+# @version 2014.09.25
+##
+
+
+# Line Prefix. I like to use '* ' for markdown
+PREFIX='* '
+
+if [[ `git rev-parse --is-inside-work-tree 2> /dev/null` != "true" ]]; then
+	echo "Not inside a git repository!"
+	exit
+fi
+
+DAYS_AGO=1
+WEEKEND=0
+# Weekend check
+if [[ $(date +%w) == 1 ]]; then
+	DAYS_AGO=3
+	WEEKEND=1
+fi
+
+if [[ ! -z "$1" ]]; then
+	DAYS_AGO="$1"
+fi;
+
+# test for bsd dates
+if [[ -n $(man date | grep "BSD General") ]]; then
+	DATESTART="date -v-"$DAYS_AGO"d +'%Y-%m-%d'"
+	if [[ $WEEKEND == 1 ]]; then
+		DAYS_AGO=1
+		DATEEND="date -v-"$DAYS_AGO"d +'%Y-%m-%d'"
+	else
+		DATEEND=$DATESTART
+	fi
+else
+	DATESTART="date -d '-"$DAYS_AGO" day' +'%y-%m-%d'"
+	 if [[ $WEEKEND == 1 ]]; then
+                DAYS_AGO=1
+                DATEEND="date -d '-"$DAYS_AGO" day' +'%y-%m-%d'"
+        else
+                DATEEND=$DATESTART
+        fi
+fi
+
+GITUSER=$(git config user.name)
+
+DATESTART=$(eval $DATESTART)
+DATEEND=$(eval $DATEEND)
+
+HASCOMMITS=$(git shortlog -s --all --after="$DATESTART 00:00" --before="$DATEEND 23:59" --author="$GITUSER" --no-merges)
+if [[ ! "$HASCOMMITS" ]]; then
+	echo "Slacker! No commits on "$DATESTART
+	exit
+fi
+
+
+git log --all --after="$DATESTART 00:00" --before="$DATEEND 23:59" --author="$GITUSER" --format=oneline --no-merges | while read -r line; do
+	echo "$PREFIX"${line:41}
+done
