@@ -4,10 +4,10 @@ lag-done
 Last Activity on Git Done: Returns your commits from the previous business day
 
 ## Usage:
-* $ lag-done 
+* ```$ lag-done```
     * Returns your commits from the previous day
     * If yesterday was a weekend, from the previous 3 days.
-* $ lag-done 5
+* ```$ lag-done 5```
     * Returns your commits from 5 days ago
 
 ## Notes
