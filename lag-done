@@ -7,36 +7,41 @@
 # Default is to show you yesterday, or if yesterday is a weekend, then friday and the weekend
 # 
 # First Param: A number for days ago to report on.
+# Second Param: The directory to check on
 #
-# Example: $ lag-done 4
+# Example: $ lag-done 4 ./project
 # This would return any commit messages from 4 days ago.
+# From the ./project directory
 #
 # Note: Merges are ignored.
 #
 # @Author Wil Wade <wil@wilwade.com>
-# @version 2014.09.25
+# @version 2020.04.24
 ##
-
 
 # Line Prefix. I like to use '* ' for markdown
 PREFIX='* '
 
-if [[ `git rev-parse --is-inside-work-tree 2> /dev/null` != "true" ]]; then
-	echo "Not inside a git repository!"
-	exit
-fi
-
 DAYS_AGO=1
 WEEKEND=0
+FOLDER=`pwd`
 # Weekend check
 if [[ $(date +%w) == 1 ]]; then
 	DAYS_AGO=3
 	WEEKEND=1
 fi
 
-if [[ ! -z "$1" ]]; then
+if [[ ! -z "$1" && "$1" =~ ^[0-9]+$ ]]; then
 	DAYS_AGO="$1"
 fi;
+
+if [[ ! -z "$2" ]]; then
+	FOLDER="$2"
+elif [[ ! -z "$1" && ! "$1" =~ ^[0-9]+$ ]]; then
+	FOLDER="$1"
+fi;
+
+pushd $FOLDER > /dev/null
 
 # test for bsd dates
 if [[ -n $(man date | grep "BSD General") ]]; then
@@ -57,6 +62,11 @@ else
         fi
 fi
 
+if [[ `git rev-parse --is-inside-work-tree 2> /dev/null` != "true" ]]; then
+	echo "Not inside a git repository!"
+	exit
+fi
+
 GITUSER=$(git config user.name)
 
 DATESTART=$(eval $DATESTART)
@@ -68,7 +78,11 @@ if [[ ! "$HASCOMMITS" ]]; then
 	exit
 fi
 
+echo "Commits for "$DATESTART
 
 git log --all --after="$DATESTART 00:00" --before="$DATEEND 23:59" --author="$GITUSER" --format=oneline --no-merges | while read -r line; do
 	echo "$PREFIX"${line:41}
 done
+
+popd > /dev/null
+
